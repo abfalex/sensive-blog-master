@@ -6,7 +6,9 @@ from django.contrib.auth.models import User
 
 class TagQuerySet(models.QuerySet):
     def popular(self):
-        return self.order_by("-posts_count")
+        return self.annotate(posts_count=Count("posts", distinct=True)).order_by(
+            "-posts_count"
+        )
 
     def fetch_posts_count(self):
         return self.annotate(posts_count=Count("posts", distinct=True))
