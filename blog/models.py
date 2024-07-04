@@ -9,6 +9,26 @@ class TagQuerySet(models.QuerySet):
         return self.annotate(tags_count=Count("posts")).order_by("-tags_count")
 
 
+class PostQuerySet(models.QuerySet):
+    def popular(self):
+        return self.annotate(
+            likes_count=Count("likes", distinct=True),
+        ).order_by("-likes_count")
+
+    def fetch_with_comments_count(self):
+        most_popular_posts = list(self)
+        most_popular_posts_ids = [post.id for post in most_popular_posts]
+        posts_with_comments = self.model.objects.filter(
+            id__in=most_popular_posts_ids
+        ).annotate(comments_count=Count("comments", distinct=True))
+        posts_comments_dict = dict(
+            posts_with_comments.values_list("id", "comments_count")
+        )
+        for post in most_popular_posts:
+            post.comments_count = posts_comments_dict.get(post.id, 0)
+        return most_popular_posts
+
+
 class Post(models.Model):
     title = models.CharField("Заголовок", max_length=200)
     text = models.TextField("Текст")
@@ -26,6 +46,8 @@ class Post(models.Model):
         User, related_name="liked_posts", verbose_name="Кто лайкнул", blank=True
     )
     tags = models.ManyToManyField("Tag", related_name="posts", verbose_name="Теги")
+
+    objects = PostQuerySet.as_manager()
 
     def __str__(self):
         return self.title
