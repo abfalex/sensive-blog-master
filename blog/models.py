@@ -1,6 +1,12 @@
 from django.db import models
+from django.db.models import Count
 from django.urls import reverse
 from django.contrib.auth.models import User
+
+
+class TagQuerySet(models.QuerySet):
+    def popular(self):
+        return self.annotate(tags_count=Count("posts")).order_by("-tags_count")
 
 
 class Post(models.Model):
@@ -35,6 +41,8 @@ class Post(models.Model):
 
 class Tag(models.Model):
     title = models.CharField("Тег", max_length=20, unique=True)
+
+    objects = TagQuerySet.as_manager()
 
     def __str__(self):
         return self.title
